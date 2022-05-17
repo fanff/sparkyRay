@@ -1,46 +1,59 @@
 """
-MIT License
 
-Copyright (c) 2017 Cyrille Rossant
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
+import logging
+
+# List of objects.
+C_WHITE = 1. * np.ones(3)
+C_BLACK = 0. * np.ones(3)
+C_BLUE = np.array([0., 0., 1.])
+C_RED = np.array([1., 0., 0.])
+
+C_PURPLE = np.array([.5, .223, .5])
 
 
 def normalize(x):
     x /= np.linalg.norm(x)
     return x
 
+
+def rotation_matrix(axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    """
+    axis = axis / np.sqrt(np.dot(axis, axis))
+    a = np.cos(theta / 2.0)
+    b, c, d = -axis * np.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
+
 def intersect_plane(O, D, P, N):
-    # Return the distance from O to the intersection of the ray (O, D) with the 
-    # plane (P, N), or +inf if there is no intersection.
-    # O and P are 3D points, D and N (normal) are normalized vectors.
+    """
+    Return the distance from O to the intersection of the ray (O, D) with the
+    plane (P, N), or +inf if there is no intersection.
+    O and P are 3D points, D and N (normal) are normalized vectors.
+    :param O: ray origin
+    :param D: ray direcction
+    :param P: plane position
+    :param N: plane normal
+    :returns: distance to the intersection
+    """
+
     denom = np.dot(D, N)
     if np.abs(denom) < 1e-6:
         return np.inf
-    d = np.dot(P - O, N) / denom
-    if d < 0:
+    dist = np.dot( P - O, N) / denom
+    if dist < 0:
         return np.inf
-    return d
+    return dist
 
 def intersect_sphere(O, D, S, R):
     # Return the distance from O to the intersection of the ray (O, D) with the 
@@ -81,11 +94,11 @@ def get_color(obj, M):
         color = color(M)
     return color
 
-def trace_ray(rayO, rayDL,ambient, diffuse, specular_c,specular_k):
+def trace_ray(scene,rayO, rayD ):
     "scene, L ,ambient, diffuse, specular_c,specular_k "
     # Find first point of intersection with the scene.
     t = np.inf
-    for i, obj in enumerate(scene):
+    for i, obj in enumerate(scene.objects):
         t_obj = intersect(rayO, rayD, obj)
         if t_obj < t:
             t, obj_idx = t_obj, i
@@ -93,37 +106,39 @@ def trace_ray(rayO, rayDL,ambient, diffuse, specular_c,specular_k):
     if t == np.inf:
         return
     # Find the object.
-    obj = scene[obj_idx]
+    obj = scene.objects[obj_idx]
     # Find the point of intersection on the object.
     M = rayO + rayD * t
     # Find properties of the object.
     N = get_normal(obj, M)
     color = get_color(obj, M)
-    toL = normalize(L - M)
+
     toO = normalize(rayO - M)
-    # Shadow: find if the point is shadowed or not.
-    l = [intersect(M + N * .0001, toL, obj_sh) 
-            for k, obj_sh in enumerate(scene) if k != obj_idx]
-    if l and min(l) < np.inf:
-        return
+
     # Start computing the color.
-    col_ray = ambient
-    # Lambert shading (diffuse).
-    col_ray += obj.get('diffuse_c', diffuse_c) * max(np.dot(N, toL), 0) * color
-    # Blinn-Phong shading (specular).
-    col_ray += obj.get('specular_c', specular_c) * max(np.dot(N, normalize(toL + toO)), 0) ** specular_k * color_light
+    col_ray = color * .1
+    for light in scene.lights:
+        toL = normalize(light["pos"] - M)
+        # Shadow: find if the point is shadowed or not.
+        l = [intersect(M + N * .0001, toL, obj_sh)
+                for k, obj_sh in enumerate(scene.objects) if k != obj_idx]
+        if l and min(l) < np.inf:
+            continue
+
+        # Lambert shading (diffuse).
+        col_ray += obj.get('diffuse_c') * max(np.dot(N, toL), 0) * color
+        # Blinn-Phong shading (specular).
+        col_ray += obj['specular_c'] * np.max(np.dot(N, normalize(toL + toO)), 0) ** obj['specular_k'] * light["color"]
     return obj, M, N, col_ray
 
 
-def raycalc(scene, rayO,rayD,L,ambient, diffuse, specular_c,specular_k):
-    depth_max=3
-    depth = 0
+def raycalc(scene, rayO,rayD,depth_max=3):
     reflection = 1.
-
     col = np.zeros(3)
+    depth = 0
     # Loop through initial and secondary rays.
     while depth < depth_max:
-        traced = trace_ray(rayO, rayD,L,ambient, diffuse, specular_c,specular_k)
+        traced = trace_ray(scene,rayO, rayD )
         if not traced:
             break
         obj, M, N, col_ray = traced
@@ -139,54 +154,67 @@ def add_sphere(position, radius, color,reflection=.5):
         position=np.array(position), 
         radius=np.array(radius),
         color=np.array(color), 
-        reflection=reflection)
+        reflection=reflection,
+        diffuse_c=.75,
+        specular_c=.5,
+        specular_k=10)
 
 
-# List of objects.
-C_WHITE = 1. * np.ones(3)
-C_BLACK = 0. * np.ones(3)
-C_BLUE = np.array([0., 0., 1.])
+
 
 def add_Sqplane(position, normal,color_plane0,color_plane1):
     return dict(type='plane', position=np.array(position), 
         normal=np.array(normal),
         color=lambda M: (color_plane0 
             if (int(M[0] * 2) % 2) == (int(M[2] * 2) % 2) else color_plane1),
-        diffuse_c=.75, specular_c=.5, reflection=.25)
+        diffuse_c=.75, specular_c=.5, reflection=.25,specular_k=1.)
 
-def add_plane(position, normal,color_plane0,diffuse_c=.75, specular_c=.5, reflection=.25):
+def add_plane(position, normal,color_plane0,
+              diffuse_c=.75,
+              specular_c=.5,
+              specular_k=1.,
+              reflection=.25):
     return dict(type='plane', position=np.array(position), 
         normal=np.array(normal),
         color=color_plane0 ,
         diffuse_c=diffuse_c ,
-        specular_c=specular_c, 
+        specular_c=specular_c,
+        specular_k=specular_k,
         reflection=reflection)
 
-if __name__ == "__main__":
-    scene = [add_sphere([.75, .1, 1.], .6,    C_BLUE , .0),
-             add_sphere([-.75, .1, 2.25], .6, [.5, .223, .5]),
-             add_sphere([-2.75, .1, 3.5], .6, [1., .572, .184]),
-             add_plane([0., -.5, 0.], [0., 1., 0.], C_WHITE),
-        ]
+def add_light(pos,color,):
+    return dict(type='light',pos=pos,color=color)
 
-    # Light position and color.
-    L = np.array([5., 5., -10.])
-    color_light = np.ones(3)
+class Scene(object):
 
-    # Default light and material parameters.
-    ambient = .05
-    diffuse_c = 1.
-    specular_c = 1.
-    specular_k = 50
+    def __init__(self,lights,objects,camera):
+        self.lights= lights
+        self.objects = objects
+        self.camera = camera
 
-    depth_max = 5  # Maximum number of light reflections.
+    def setCamera(self,loc=None,dir=None):
+        if loc is not None:
+            self.camera[0] = loc
+        if dir is not None :
+            self.camera[1] = dir
+
+def iterateGenerate(scene,w=10,h=10,depth_max=3,figname=None):
+    """
 
 
-    O = np.array([0., 0.35, -1.])  # Camera.
-    Q = np.array([0., 0., 0.])  # Camera pointing to.
+    """
+    log = logging.getLogger("it")
 
-    w = 100
-    h = w
+    O,Q = scene.camera
+
+    rmat = rotation_matrix([0,1,0], np.pi/2.)
+    camDir = normalize(Q - O)
+
+    planeLoc = O+camDir
+    orthx = rmat.dot(camDir)
+
+    orthy = rotation_matrix(camDir, np.pi / 2.).dot(orthx)
+    log.info("camDir: %s  orth: %s", camDir, orthx)
 
     r = float(w) / h
     # Screen coordinates: x0, y0, x1, y1.
@@ -201,23 +229,17 @@ if __name__ == "__main__":
             print(i / float(w) * 100, "%")
         for j, y in enumerate(np.linspace(S[1], S[3], h)):
             col[:] = 0
-            Q[:2] = (x, y)
-            D = normalize(Q - O)
-            depth = 0
-            rayO, rayD = O, D
-            reflection = 1.
-            # Loop through initial and secondary rays.
-            while depth < depth_max:
-                traced = trace_ray(rayO, rayD,L,ambient, diffuse, specular_c,specular_k)
-                if not traced:
-                    break
-                obj, M, N, col_ray = traced
-                # Reflection: create a new ray.
-                rayO, rayD = M + N * .0001, normalize(rayD - 2 * np.dot(rayD, N) * N)
-                depth += 1
-                col += reflection * col_ray
-                reflection *= obj.get('reflection', 1.)
+
+            rayD = normalize((planeLoc + [x*orthx[0] , orthy[1]*y ,x*orthx[2] ]) - O)
+            rayO = O
+
+            col = raycalc(scene, rayO, rayD, depth_max=depth_max )
+
             img[h - j - 1, i, :] = np.clip(col, 0, 1)
 
-    plt.imsave('fig.png', img)
+    if figname is None:
+        return img
+    else:
+        plt.imsave(figname, img)
+
 
