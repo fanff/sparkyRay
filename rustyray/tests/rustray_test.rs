@@ -1,6 +1,6 @@
 
 // use rustyray::Vec3f;
-mod rustyray;
+// rustyray;
 
 use rustyray::norm_vec_2;
 
@@ -16,7 +16,7 @@ mod tests {
         dbg!((v1.x, v1.y,v1.z));
 
 
-         assert_eq!(1.0, norm_vec_2(v1));
+         assert_eq!(1.0, rustyray::norm_vec_2(v1));
 
     }
 }
