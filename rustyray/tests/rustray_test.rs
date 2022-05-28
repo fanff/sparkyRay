@@ -3,7 +3,8 @@
 #[cfg(test)]
 mod tests {
     // use super::*;
-    use rustyray::{norm_vec_2,norm_vec, Vec3f, rotation_matrix};
+    use rustyray::{norm_vec_2,norm_vec, Vec3f, rotation_matrix,
+                   Sphere,intersect_sphere};
 
     use ndarray::{arr1, arr2, Array1, Array2};
 
@@ -21,5 +22,19 @@ mod tests {
 
 
         let rm = rotation_matrix(v1, 1.0);
+    }
+
+    #[test]
+    fn test_sphereIntersect() {
+        let loc: &Vec3f =
+            &arr1(&[0., 0., 0.]);
+
+        let dir: &Vec3f =
+            &arr1(&[1., 0., 0.]);
+
+        let s1:&Sphere = &Sphere{origin:arr1(&[5., 0., 0.]) , radius :2.0};
+
+        let dist = intersect_sphere(loc,dir,s1);
+        assert_eq!(3.0, dist);
     }
 }
