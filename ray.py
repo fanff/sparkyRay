@@ -208,7 +208,7 @@ def iterateGenerate(scene,w=10,h=10,depth_max=3,figname=None):
     O,Q = scene.camera
 
     rmat = rotation_matrix([0,1,0], np.pi/2.)
-    camDir = normalize(Q - O)
+    camDir = Q#normalize(Q - O)
 
     planeLoc = O+camDir
     orthx = rmat.dot(camDir)

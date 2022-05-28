@@ -43,16 +43,18 @@ def testScene1 ():
                        specular_k = .0050 ,
                        reflection = .0),
          ],
-        [np.array([2., 1., 5.]),np.array([1., 0., 0.])],
+        [np.array([-5., 0., 3.]),
+         np.array([1., 0., 0.])],
     )
 class IterateGenerate_Tests(unittest.TestCase):
     def test1_simple(self):
         scene = testScene1 ()
-
+        w = int(150)
+        h = int(w * 9.0 / 16.0)
         rayO = np.array([0., 0., 0.])
         rayD = np.array([1., 0., 0.])
-
-        ray.iterateGenerate(scene,figname="t1.png")
+        scene.setCamera(rayO,rayD)
+        ray.iterateGenerate(scene,figname="t1.png",w=w, h=h)
 
 
     def test2_simple(self):
@@ -60,12 +62,13 @@ class IterateGenerate_Tests(unittest.TestCase):
         scene = testScene1 ()
 
 
-        w = 60
-        h = 40
+        w = int(150)
+        h = int(w * 9.0 /16.0)
         dirs = [
 
-            #np.array([.75, .1, 1.]),
-            np.array([-.75, .1, 2.25]),
+            ray.normalize(np.array([1, .0  ,0.0])),
+            ray.normalize(np.array([1, .0, 1])),
+            ray.normalize(np.array([1.0, 0.5, 0.])),
             #np.array([3, 0, 0]),
             #np.array([-2.75, .1, 3.5]),
             ]

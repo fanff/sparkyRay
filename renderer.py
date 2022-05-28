@@ -4,6 +4,9 @@ import numpy as np
 from kafka import KafkaProducer
 from kafka import KafkaConsumer
 
+from ray import rotation_matrix
+
+
 def bytify(msg):
     return json.dumps( msg).encode("utf-8")
         
@@ -108,10 +111,10 @@ class Game():
         self.network.update(self)
 
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == pygame.QUIT:
                 print("quit")
                 self.active=False
-            elif event.type == KEYDOWN and event.key == K_ESCAPE:
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 print("escape")
                 self.active=False
             elif event.type == pygame.MOUSEMOTION:
@@ -119,7 +122,7 @@ class Game():
                 self.mousePos = event.pos
                 self.camera.rotate(event.rel[0]*self.rotSpeed,event.rel[1]*self.rotSpeed)
 
-            elif event.type == KEYDOWN and event.key == K_LEFT:
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_LEFT:
                 print("left!")
 
     def render(self):
@@ -140,9 +143,8 @@ class Game():
         self.screen.blit(self.background,(0,0))
 
         pygame.display.flip()
-
+import pygame
 if __name__=="__main__":
-    import pygame
     from pygame.locals import *
     game = Game()
 
