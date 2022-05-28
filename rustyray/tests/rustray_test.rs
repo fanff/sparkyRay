@@ -4,7 +4,7 @@
 mod tests {
     // use super::*;
     use rustyray::{norm_vec_2,norm_vec, Vec3f, rotation_matrix,
-                   Sphere,intersect_sphere};
+                   Sphere,intersect_sphere,Color};
 
     use ndarray::{arr1, arr2, Array1, Array2};
 
@@ -32,9 +32,10 @@ mod tests {
         let dir: &Vec3f =
             &arr1(&[1., 0., 0.]);
 
-        let s1:&Sphere = &Sphere{origin:arr1(&[5., 0., 0.]) , radius :2.0};
+        let s1 = Sphere{origin:arr1(&[5., 0., 0.]) , radius :2.0,
+                        color:Color::new(1.,2.,3.)};
 
-        let dist = intersect_sphere(loc,dir,s1);
+        let dist = intersect_sphere(&loc, &dir, &s1);
         assert_eq!(3.0, dist);
     }
 }

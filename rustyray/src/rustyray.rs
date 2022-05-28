@@ -1,5 +1,5 @@
 use std::ops;
-
+use std::ops::Add;
 use ndarray::{arr1, arr2,arr3,Array1,Array2};
 
 pub type Vec3f = Array1<f64>;
@@ -10,24 +10,47 @@ pub struct Ray<'a>{
     pub dir: &'a Vec3f
 }
 
+#[derive(Debug, Clone,PartialEq)]
+pub struct Color([f64;3]);
+
+impl Color {
+  pub fn new(r:f64,g:f64,b:f64)-> Color{
+      Color([r,g,b])
+  }
+  fn norm(&self) -> f64 {
+      return 1.0;
+  }
+
+}
+impl Add<Color> for Color {
+    type Output = Color;
+    fn add(self,right:Color) -> Color{
+        Color([self.0[0] + right.0[0], self.0[1] + right.0[1], self.0[2] + right.0[2]])
+    }
+}
 
 
+//impl Add<f64> for Color { ... }
 
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Sphere{
     pub origin: Vec3f,
-    pub radius: f64
+    pub radius: f64,
+    pub color:Color
+
 }
 impl Sphere {
     pub fn intersect(&self,ray : &Ray) -> f64 {
         return intersect_sphere(ray.origin,ray.dir,self);
     }
-    pub fn get_normal(&self,loc: &Vec3f) -> &Vec3f{
-        let n = loc - self.origin;
+    pub fn get_normal(&self,loc: &Vec3f) -> Vec3f{
+        let n = loc - &self.origin ;
         let norm = norm_vec(&n);
         //normalize_inplace(&mut n);
-        return &(n / norm)
+        return n / norm
+    }
+    fn get_normal_ip(&self, loc: &Vec3f, out: &mut Vec3f) {
+        *out = self.get_normal(loc)
     }
 }
 
@@ -57,7 +80,8 @@ pub fn rotation_matrix(axis:&Vec3f,theta:f64) -> Array2<f64> {
     let ab= a *b;
     let bd= b *d;
     let cd= c *d;
-    return arr2(&[[aa + bb - cc - dd, 2. * (bc + ad), 2. * (bd - ac)],
+
+    arr2(&[[aa + bb - cc - dd, 2. * (bc + ad), 2. * (bd - ac)],
                      [2. * (bc - ad), aa + cc - bb - dd, 2. * (cd + ab)],
                      [2. * (bd + ac), 2. * (cd - ab), aa + dd - bb - cc]])
 }
