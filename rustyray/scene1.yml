@@ -1,0 +1,7 @@
+
+
+materials:
+  - []
+objects:
+  - sphere:
+      [1.1.1.1]
