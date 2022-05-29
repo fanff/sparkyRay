@@ -7,6 +7,7 @@ use std::io::BufReader;
 use std::ops::{Add, AddAssign, Mul};
 
 use ndarray::{arr1, arr2, Array1, Array2};
+use sdl2::render::Texture;
 
 pub type Vec3f = Array1<f64>;
 
@@ -26,6 +27,18 @@ impl Camera {
         self.dir = mat.dot(&self.dir);
 
         //let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
+    }
+    pub fn move_speed(&mut self, speed: f64) {
+        self.origin = &self.origin + &self.dir * speed;
+        //let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
+    }
+    pub fn rot_angl(&mut self, theta: f64) {
+        let up = arr1(&[0.0, 1.0, 0.0]);
+        self.dir = rotation_matrix(&up, theta).dot(&self.dir);
+    }
+    pub fn rot_ud(&mut self, theta: f64) {
+        self.dir[1] += theta;
+        self.dir = normalize(&self.dir)
     }
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -203,9 +216,43 @@ impl Scene {
         //
         //       return col
     }
+    pub fn render_to_texture(&self, w: usize, h: usize, depth: u64, texture: &mut Texture) {
+        let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
+        let camera_plane_loc = &self.camera.origin + &self.camera.dir;
+        let orthx = rmat.dot(&self.camera.dir);
 
-    pub fn enumerate_rays(self) {}
-    // for for  .. w,h
+        let orthy = rotation_matrix(&self.camera.dir, FRAC_PI_2).dot(&orthx);
+
+        let r = (w as f64) / (h as f64);
+        texture
+            .with_lock(None, |buffer: &mut [u8], pitch: usize| {
+                //buffer.copy_from_slice(array);
+
+                for i in 0..w {
+                    for j in 0..h {
+                        //
+                        let x = 2.0 * i as f64 / w as f64 - 1.0;
+                        let y = (2.0 * j as f64 / r) / h as f64 - 1.0;
+                        //let lol = arr1(&[x * orthx[0], orthy[1] * y, x * orthx[2]]);
+                        //let lol = &orthx * x + &orthy * y;
+                        let lol = arr1(&[x * orthx[0], orthy[1] * y, x * orthx[2]]);
+                        let rayD = normalize(&((&camera_plane_loc + lol) - &self.camera.origin));
+                        let ray = Ray {
+                            origin: self.camera.origin.clone(),
+                            dir: rayD,
+                        };
+                        let col = self.raycalc(&ray, depth).to_rbg_tuple();
+
+                        let offset = j * pitch + i * 3;
+                        buffer[offset] = col[0];
+                        buffer[offset + 1] = col[1];
+                        buffer[offset + 2] = col[2];
+                    }
+                }
+            })
+            .unwrap();
+        // flkdj
+    }
     pub fn render(
         &self,
         w: usize,
@@ -265,6 +312,14 @@ impl Color {
         let b8 = (self.0[2] * 255.0) as u8;
 
         image::Rgb([r8, g8, b8])
+    }
+
+    fn to_rbg_tuple(&self) -> [u8; 3] {
+        let r8 = (self.0[0] * 255.0) as u8;
+        let g8 = (self.0[1] * 255.0) as u8;
+        let b8 = (self.0[2] * 255.0) as u8;
+
+        [r8, g8, b8]
     }
 }
 

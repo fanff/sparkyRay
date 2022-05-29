@@ -16,8 +16,17 @@ serde = { version = "1.0", features = ["derive"] }
 winit = "0.26.1"
 
 
+
+[dependencies.sdl2]
+sdl2 = "0.35.2"
+default-features = false
+features = ["gfx"]
+
+
+
 [dev-dependencies]
 criterion = "0.3"
+
 
 
 [lib]
