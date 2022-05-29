@@ -1,5 +1,8 @@
 #[cfg(test)]
 mod tests {
+    use image::imageops::{resize, FilterType};
+    use std::fs::File;
+    use std::io::BufReader;
     // use super::*;
     use rustyray::{
         intersect_sphere, norm_vec, norm_vec_2, rotation_matrix, Camera, Color, Light, Material,
@@ -63,6 +66,60 @@ mod tests {
         println!("{:#?}", scene.trace_ray(&ray));
         let color = scene.raycalc(&ray, 3);
 
-        scene.render(500, 500);
+        //let j = ;
+        let w = match File::create("data.json") {
+            Ok(file) => file,
+            Err(error) => panic!("Problem opening the file: {:?}", error),
+        };
+
+        let j = match serde_json::to_writer_pretty(w, &scene) {
+            Ok(file) => file,
+            Err(error) => panic!("Problem serialising {:?}", error),
+        };
+
+        let img = scene.render(50, 50, 3, -1.0, 1.0, -1.0, 1.0);
+        img.save("sphere1.png");
+    }
+
+    #[test]
+    fn test_read_scene1() {
+        let f = match File::open("scene1.json") {
+            Ok(file) => file,
+            Err(error) => panic!("Problem opening the file: {:?}", error),
+        };
+
+        let reader = BufReader::new(f);
+        let scene: Scene = serde_json::from_reader(reader).unwrap();
+        let factor = 2;
+        let img = scene.render(19 * factor, 10 * factor, 5, -1.0, 1.0, -1.0, 1.0);
+
+        let f = resize(
+            &img,
+            (19 * factor * 4) as u32,
+            (10 * factor * 4) as u32,
+            FilterType::Nearest,
+        );
+        f.save("scene1.png");
+    }
+
+    #[test]
+    fn test_render_multi() {
+        let f = match File::open("scene1.json") {
+            Ok(file) => file,
+            Err(error) => panic!("Problem opening the file: {:?}", error),
+        };
+
+        let reader = BufReader::new(f);
+        let scene: Scene = serde_json::from_reader(reader).unwrap();
+        let factor = 3;
+        let img = scene.render(19 * factor, 10 * factor, 5, -1.0, 1.0, -1.0, 1.0);
+
+        let f = resize(
+            &img,
+            (19 * factor * 4) as u32,
+            (10 * factor * 4) as u32,
+            FilterType::Nearest,
+        );
+        f.save("scene1_multi.png");
     }
 }
