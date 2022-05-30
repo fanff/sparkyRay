@@ -1,7 +1,8 @@
 extern crate sdl2;
-
 use ndarray::arr1;
 use rayon::iter::IntoParallelIterator;
+
+use rustyray::game::sdl_game::Game;
 use rustyray::{load_scene_name, normalize, rotation_matrix, ViewZone};
 use sdl2::event::Event;
 use sdl2::gfx::framerate::FPSManager;
@@ -14,9 +15,6 @@ use sdl2::video::WindowContext;
 use std::borrow::BorrowMut;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
-const BLACK: Color = Color::RGB(0, 0, 0);
-const BLUE: Color = Color::RGB(1, 2, 233);
 
 pub fn make_textures<'r>(
     texture_w: u32,
@@ -40,6 +38,8 @@ pub fn make_textures<'r>(
 }
 
 fn main() -> Result<(), String> {
+    let game: Game;
+
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(8)
         .build()
@@ -93,6 +93,7 @@ fn main() -> Result<(), String> {
     //})?;
 
     let mut scene = load_scene_name("scene1.json".to_string());
+    let mut parallelmode = false;
 
     let mut event_pump = sdl_context.event_pump()?;
     // let mut mng = FPSManager::new();
@@ -105,7 +106,6 @@ fn main() -> Result<(), String> {
 
     let mut mousex = 0;
     let mut mousey = 0;
-    let mut parallelmode = false;
 
     'running: loop {
         strt_loop_time = Instant::now();

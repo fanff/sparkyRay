@@ -1,3 +1,5 @@
+pub mod game;
+
 use itertools_num::linspace;
 use serde::{Deserialize, Serialize};
 use std::f64::consts::FRAC_PI_2;

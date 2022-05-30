@@ -21,7 +21,7 @@ fn main() {
         *control_flow = ControlFlow::Poll;
 
         // ControlFlow::Wait pauses the event loop if no events are available to process.
-        // This is ideal for non-game applications that only update in response to user
+        // This is ideal for non-game.rs applications that only update in response to user
         // input, and uses significantly less power/CPU time than ControlFlow::Poll.
         // *control_flow = ControlFlow::Wait;
 
