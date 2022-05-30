@@ -1,18 +1,36 @@
 extern crate sdl2;
 
 use ndarray::arr1;
-use rustyray::{load_scene_name, normalize, rotation_matrix};
+use rustyray::{load_scene_name, normalize, rotation_matrix, ViewZone};
 use sdl2::event::Event;
 use sdl2::gfx::framerate::FPSManager;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum::RGB888;
 use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect;
+use sdl2::render::{Texture, TextureCreator};
+use sdl2::video::WindowContext;
 use std::borrow::BorrowMut;
 use std::time::{Duration, Instant};
 
 const BLACK: Color = Color::RGB(0, 0, 0);
 const BLUE: Color = Color::RGB(1, 2, 233);
+
+pub fn make_textures<'r>(
+    texture_w: u32,
+    texture_h: u32,
+    views: &Vec<ViewZone>,
+    texture_creator: &'r sdl2::render::TextureCreator<sdl2::video::WindowContext>,
+) -> Vec<Texture<'r>> {
+    return views
+        .iter()
+        .map(|_vp| {
+            texture_creator
+                .create_texture_streaming(PixelFormatEnum::RGB24, texture_w, texture_h)
+                .unwrap()
+        })
+        .collect::<Vec<Texture>>();
+}
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init().unwrap();
@@ -36,6 +54,11 @@ fn main() -> Result<(), String> {
 
     let mut texture_w: u32 = 8;
     let mut texture_h: u32 = 6;
+
+    let views = ViewZone::fullratio().split_n_ratio(3, 3);
+
+    //:
+    let mut textures = make_textures(texture_w, texture_h, &views, &texture_creator);
 
     let mut texture = texture_creator
         .create_texture_streaming(PixelFormatEnum::RGB24, texture_w, texture_h)
@@ -102,9 +125,7 @@ fn main() -> Result<(), String> {
                     texture_h *= 2;
                     texture_w *= 2;
 
-                    texture = texture_creator
-                        .create_texture_streaming(PixelFormatEnum::RGB24, texture_w, texture_h)
-                        .map_err(|e| e.to_string())?;
+                    textures = make_textures(texture_w, texture_h, &views, &texture_creator);
                 }
 
                 Event::KeyDown {
@@ -150,7 +171,9 @@ fn main() -> Result<(), String> {
         }
 
         if mousex != 0 {
-            scene.camera.rot_angl(1.0 * loop_dur as f64 * mousex as f64);
+            scene
+                .camera
+                .rot_angl((1.0 * loop_dur as f64) * mousex as f64);
         }
 
         if mousey != 0 {
@@ -159,12 +182,28 @@ fn main() -> Result<(), String> {
         }
 
         // render render();
-        scene.render_to_texture(
-            texture_w as usize,
-            texture_h as usize,
-            5,
-            texture.borrow_mut(),
-        );
+        // scene.render_to_texture(
+        //     texture_w as usize,
+        //     texture_h as usize,
+        //     5,
+        //     texture.borrow_mut(),
+        // );
+
+        //scene.render_zone_to_texture(
+        //    texture_w as usize,
+        //    texture_h as usize,
+        //    ViewZone::fullratio(),
+        //    5,
+        //    texture.borrow_mut(),
+        //);
+
+        let app = textures.iter_mut().zip(views.iter()).map(|(t, vp)| {
+            scene.render_zone_to_texture(texture_w as usize, texture_h as usize, vp, 5, t);
+
+            canvas.copy(&t, None, vp.to_sceen_rect(800, 600)).unwrap();
+        });
+        let a = app.collect::<()>();
+
         //let img = scene.render(
         //    texture_w as usize,
         //    texture_h as usize,
@@ -186,7 +225,7 @@ fn main() -> Result<(), String> {
         //canvas.set_draw_color(BLUE);
         //canvas.fill_rect(Rect::new(10, 20, 5, 50));
 
-        canvas.copy(&texture, None, Rect::new(0, 0, 800, 600))?;
+        //canvas.copy(&texture, None, Rect::new(0, 0, 800, 600))?;
 
         canvas.present();
 

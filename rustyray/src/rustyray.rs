@@ -7,6 +7,7 @@ use std::io::BufReader;
 use std::ops::{Add, AddAssign, Mul};
 
 use ndarray::{arr1, arr2, Array1, Array2};
+use sdl2::rect::Rect;
 use sdl2::render::Texture;
 
 pub type Vec3f = Array1<f64>;
@@ -23,11 +24,6 @@ pub struct Camera {
     pub dir: Vec3f,
 }
 impl Camera {
-    pub fn rotate(&mut self, mat: &Array2<f64>) {
-        self.dir = mat.dot(&self.dir);
-
-        //let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
-    }
     pub fn move_speed(&mut self, speed: f64) {
         self.origin = &self.origin + &self.dir * speed;
         //let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
@@ -94,6 +90,66 @@ impl Object {
             Object::Sphere(Sphere { material, .. }) => material,
             Object::Plane(x) => &x.material,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ViewZone {
+    pub x_min: f64,
+    pub x_len: f64,
+    pub y_min: f64,
+    pub y_len: f64,
+}
+impl ViewZone {
+    pub fn fullratio() -> ViewZone {
+        ViewZone {
+            x_min: -1.0,
+            x_len: 2.0,
+            y_min: -1.0,
+            y_len: 2.0,
+        }
+    }
+    pub fn split_n_ratio(&self, x_split: u8, y_split: u8) -> Vec<ViewZone> {
+        let x_len = self.x_len / x_split as f64;
+        let y_len = self.y_len / y_split as f64;
+
+        //for i in 0..x_split {
+        //    for j in 0..y_split {
+        //        ViewZone {
+        //            x_min: self.x_min + x_len * i as f64,
+        //            x_len: x_len,
+        //            y_min: self.y_min + y_len * j as f64,
+        //            y_len: y_len,
+        //        };
+        //    }
+        //}
+
+        let lol = (0..x_split)
+            .flat_map(|i| {
+                (0..x_split).map(move |j| ViewZone {
+                    x_min: self.x_min + x_len * i as f64,
+                    x_len: x_len,
+                    y_min: self.y_min + y_len * j as f64,
+                    y_len: y_len,
+                })
+            })
+            .collect::<Vec<ViewZone>>();
+        return lol;
+    }
+
+    pub fn to_sceen_rect(&self, w: u32, h: u32) -> Rect {
+        let xi = (self.x_min + 1.0) / 2.0;
+        let yi = (self.y_min + 1.0) / 2.0;
+
+        let width = self.x_len / 2.0;
+        let height = self.x_len / 2.0;
+
+        Rect::new(
+            (xi * w as f64) as i32,
+            (yi * h as f64) as i32,
+            (width * w as f64).round() as u32,
+            (height * h as f64).round() as u32,
+        )
     }
 }
 
@@ -216,10 +272,62 @@ impl Scene {
         //
         //       return col
     }
+    pub fn render_zone_to_texture(
+        &self,
+        w: usize,
+        h: usize,
+        view_zone: &ViewZone,
+        depth: u64,
+        texture: &mut Texture,
+    ) {
+        let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
+        let camera_plane_loc = &self.camera.origin + &self.camera.dir;
+        let mut orthx = rmat.dot(&self.camera.dir);
+        orthx[1] = 0.0;
+
+        let orthy = rotation_matrix(&self.camera.dir, FRAC_PI_2).dot(&orthx);
+
+        let r = (w as f64) / (h as f64);
+        texture
+            .with_lock(None, |buffer: &mut [u8], pitch: usize| {
+                //buffer.copy_from_slice(array);
+
+                for i in 0..w {
+                    for j in 0..h {
+                        //
+                        let ir = i as f64 / w as f64; // 0,1
+                        let x = view_zone.x_min + (view_zone.x_len) * ir;
+                        //let x = 2.0 * i as f64 / w as f64 - 1.0;
+
+                        let y = view_zone.y_min + (view_zone.y_len) * ((j as f64 / r) / h as f64);
+                        //let y = (2.0 * j as f64 / r) / h as f64 - 1.0;
+                        //let lol = arr1(&[x * orthx[0], orthy[1] * y, x * orthx[2]]);
+                        //let lol = &orthx * x + &orthy * y;
+                        let lol = arr1(&[x * orthx[0], orthy[1] * y, x * orthx[2]]);
+                        let rayD = normalize(&((&camera_plane_loc + lol) - &self.camera.origin));
+                        let ray = Ray {
+                            origin: self.camera.origin.clone(),
+                            dir: rayD,
+                        };
+                        let col = self.raycalc(&ray, depth).to_rbg_tuple();
+
+                        let offset = j * pitch + i * 3;
+                        buffer[offset..offset + 3].copy_from_slice(&col);
+                        //buffer[offset] = col[0];
+                        //buffer[offset + 1] = col[1];
+                        //buffer[offset + 2] = col[2];
+                    }
+                }
+            })
+            .unwrap();
+        // flkdj
+    }
+
     pub fn render_to_texture(&self, w: usize, h: usize, depth: u64, texture: &mut Texture) {
         let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
         let camera_plane_loc = &self.camera.origin + &self.camera.dir;
-        let orthx = rmat.dot(&self.camera.dir);
+        let mut orthx = rmat.dot(&self.camera.dir);
+        orthx[1] = 0.0;
 
         let orthy = rotation_matrix(&self.camera.dir, FRAC_PI_2).dot(&orthx);
 

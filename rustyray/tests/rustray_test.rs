@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod tests_render {
     use image::imageops::{resize, FilterType};
     use std::fs::File;
     use std::io::BufReader;
@@ -111,7 +111,7 @@ mod tests {
 
         let reader = BufReader::new(f);
         let scene: Scene = serde_json::from_reader(reader).unwrap();
-        let factor = 3;
+        let factor = 1;
         let img = scene.render(19 * factor, 10 * factor, 5, -1.0, 1.0, -1.0, 1.0);
 
         let f = resize(
@@ -121,5 +121,18 @@ mod tests {
             FilterType::Nearest,
         );
         f.save("scene1_multi.png");
+    }
+}
+
+#[cfg(test)]
+mod tests_view_port {
+    use rustyray::ViewZone;
+
+    #[test]
+    fn test_split_view_port() {
+        let v = ViewZone::fullratio();
+        let s1 = v.split_n_ratio(3, 3);
+
+        dbg!("{:?}", s1);
     }
 }
