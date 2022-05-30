@@ -143,12 +143,12 @@ impl ViewZone {
 
         let width = self.x_len / 2.0;
         let height = self.y_len / 2.0;
-
+        let r = w as f64 / h as f64;
         Rect::new(
             (xi * w as f64) as i32,
             (yi * h as f64) as i32,
-            (width * w as f64).round() as u32,
-            (height * h as f64).round() as u32,
+            (w as f64 * width).round() as u32,
+            (h as f64 * height).round() as u32,
         )
     }
 }
@@ -299,7 +299,7 @@ impl Scene {
                         let x = view_zone.x_min + (view_zone.x_len) * ir;
                         //let x = 2.0 * i as f64 / w as f64 - 1.0;
 
-                        let y = view_zone.y_min + (view_zone.y_len) * ((j as f64 / r) / h as f64);
+                        let y = view_zone.y_min + (view_zone.y_len) * ((j as f64) / h as f64);
                         //let y = (2.0 * j as f64 / r) / h as f64 - 1.0;
                         //let lol = arr1(&[x * orthx[0], orthy[1] * y, x * orthx[2]]);
                         //let lol = &orthx * x + &orthy * y;
@@ -320,6 +320,54 @@ impl Scene {
                 }
             })
             .unwrap();
+        // flkdj
+    }
+    pub fn render_zone_to_buff(
+        &self,
+        w: usize,
+        h: usize,
+        view_zone: &ViewZone,
+        depth: u64,
+        buffer: &mut [u8],
+        pitch: usize,
+    ) {
+        let rmat = rotation_matrix(&arr1(&[0.0, 1.0, 0.0]), FRAC_PI_2);
+        let camera_plane_loc = &self.camera.origin + &self.camera.dir;
+        let mut orthx = rmat.dot(&self.camera.dir);
+        orthx[1] = 0.0;
+
+        let orthy = rotation_matrix(&self.camera.dir, FRAC_PI_2).dot(&orthx);
+
+        let r = (w as f64) / (h as f64);
+
+        for i in 0..w {
+            for j in 0..h {
+                //
+                let ir = i as f64 / w as f64; // 0,1
+                let x = view_zone.x_min + (view_zone.x_len) * ir;
+                //let x = 2.0 * i as f64 / w as f64 - 1.0;
+
+                let y = view_zone.y_min + (view_zone.y_len) * ((j as f64) / h as f64);
+                //let y = (2.0 * j as f64 / r) / h as f64 - 1.0;
+                //let lol = arr1(&[x * orthx[0], orthy[1] * y, x * orthx[2]]);
+                //let lol = &orthx * x + &orthy * y;
+                let lol = arr1(&[x * orthx[0], orthy[1] * y, x * orthx[2]]);
+                let rayD = normalize(&((&camera_plane_loc + lol) - &self.camera.origin));
+                let ray = Ray {
+                    origin: self.camera.origin.clone(),
+                    dir: rayD,
+                };
+                let col = self.raycalc(&ray, depth).to_rbg_tuple();
+
+                let offset = (j * pitch + i) * 3;
+
+                buffer[offset..offset + 3].copy_from_slice(&col);
+                // buffer[offset + 0] = col[0];
+                // buffer[offset + 1] = col[1];
+                // buffer[offset + 2] = col[2];
+            }
+        }
+
         // flkdj
     }
 
