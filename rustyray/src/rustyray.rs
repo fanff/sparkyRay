@@ -142,7 +142,7 @@ impl ViewZone {
         let yi = (self.y_min + 1.0) / 2.0;
 
         let width = self.x_len / 2.0;
-        let height = self.x_len / 2.0;
+        let height = self.y_len / 2.0;
 
         Rect::new(
             (xi * w as f64) as i32,

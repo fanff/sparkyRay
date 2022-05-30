@@ -52,17 +52,17 @@ fn main() -> Result<(), String> {
 
     let texture_creator = canvas.texture_creator();
 
-    let mut texture_w: u32 = 8;
-    let mut texture_h: u32 = 6;
+    let mut texture_w: u32 = 4;
+    let mut texture_h: u32 = 4;
 
-    let views = ViewZone::fullratio().split_n_ratio(3, 3);
+    let views = ViewZone::fullratio().split_n_ratio(4, 4);
 
     //:
     let mut textures = make_textures(texture_w, texture_h, &views, &texture_creator);
 
-    let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, texture_w, texture_h)
-        .map_err(|e| e.to_string())?;
+    // let mut texture = texture_creator
+    //     .create_texture_streaming(PixelFormatEnum::RGB24, texture_w, texture_h)
+    //     .map_err(|e| e.to_string())?;
     // Create a red-green gradient
     //texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
     //    for y in 0..texture_h {
