@@ -2,7 +2,7 @@ extern crate sdl2;
 use ndarray::arr1;
 use rayon::iter::IntoParallelIterator;
 
-use rustyray::game::sdl_game::Game;
+use rustyray::game::SdlGame;
 use rustyray::{load_scene_name, normalize, rotation_matrix, ViewZone};
 use sdl2::event::Event;
 use sdl2::gfx::framerate::FPSManager;
@@ -38,7 +38,7 @@ pub fn make_textures<'r>(
 }
 
 fn main() -> Result<(), String> {
-    let game: Game;
+    let game: SdlGame;
 
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(8)

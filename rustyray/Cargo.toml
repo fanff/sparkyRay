@@ -20,7 +20,7 @@ rayon = "1.5.3"
 [dependencies.sdl2]
 sdl2 = "0.35.2"
 default-features = false
-features = ["gfx"]
+features = ["gfx","ttf"]
 
 
 
