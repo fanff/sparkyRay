@@ -52,6 +52,8 @@ mod tests_render {
             camera: Camera {
                 origin: origin.clone(),
                 dir: dir.clone(),
+                orthx: Default::default(),
+                orthy: Default::default(),
             },
             objects: vec![Object::Sphere(s1)],
             lights: vec![light],

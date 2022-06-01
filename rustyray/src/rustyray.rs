@@ -1,4 +1,5 @@
 pub mod game;
+mod sdl_loader;
 
 use itertools_num::linspace;
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,7 @@ use sdl2::render::Texture;
 
 pub type Vec3f = Array1<f64>;
 
+use crate::sdl_loader::load_stl;
 use nalgebra::Vector3;
 
 //pub type Vec3f = Vector3<f64>;
@@ -626,6 +628,15 @@ impl Material {
             specular_k: 0.0,
         }
     }
+    pub fn mat_color(c: Color) -> Material {
+        Material {
+            color: c,
+            reflection: 0.0,
+            diffuse_c: 0.5,
+            specular_c: 0.0,
+            specular_k: 0.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -637,13 +648,13 @@ pub struct Triangle {
     pub material: Material,
 }
 impl Triangle {
-    pub fn new(v0: Vec3f, v1: Vec3f, v2: Vec3f) -> Triangle {
+    pub fn new(v0: Vec3f, v1: Vec3f, v2: Vec3f, material: Material) -> Triangle {
         let mut t = Triangle {
             v0: v0,
             v1: v1,
             v2: v2,
             normal: vec3f_zero(),
-            material: Material::default(),
+            material: material,
         };
         t.normal = t.get_normal();
         return t;
@@ -910,6 +921,7 @@ pub fn load_scene_name(filename: String) -> Scene {
     so.push(ob);
 
     //.a(ob);
-
+    let mut tris = load_stl("./Bunny-LowPoly.stl".to_string());
+    so.append(&mut tris);
     scene
 }

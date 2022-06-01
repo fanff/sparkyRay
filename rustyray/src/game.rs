@@ -8,6 +8,8 @@ pub const TEXTURE_BYTE_SIZE: usize = (TEXTURE_H * TEXTURE_W * 3) as usize;
 pub type TextureType = [u8; 3 * TEXTURE_H as usize * TEXTURE_W as usize];
 
 use crate::{load_scene_name, Scene, ViewZone};
+
+
 use rayon::ThreadPool;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};
