@@ -268,7 +268,6 @@ fn main() -> Result<(), String> {
                             &vp_copy,
                             depth,
                             &mut buff,
-                            texture_w as usize,
                         );
 
                         let r = vp_copy.to_sceen_rect(800, 600);

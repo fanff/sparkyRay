@@ -3,7 +3,8 @@ use sdl2::pixels::{Color, PixelFormatEnum};
 use sdl2::rect::Rect;
 use sdl2::render::TextureQuery;
 use sdl2::ttf::Font;
-use std::time::Instant;
+use std::time::{Duration, Instant};
+extern crate blas_src;
 
 fn main() -> Result<(), String> {
     let mut g = SdlGame::new(800, 600, "scene1.json".to_string());
@@ -31,8 +32,6 @@ fn main() -> Result<(), String> {
         g.render(&mut tex);
         g.canvas.present();
 
-        loop_dur = (Instant::now() - strt_loop_time).as_secs_f64();
-
         // blit debug info
         //let loop_durstr = format!("{:?}", loop_dur);
         let surface = font
@@ -42,7 +41,7 @@ fn main() -> Result<(), String> {
                     1.0 / loop_dur,
                     g.rendering_options.parallel_mode,
                     g.rendering_options.depth,
-                    (g.rendering_options.split as u32).pow(2),
+                    (g.rendering_options.split as u32),
                     g.rendering_options,
                 )
                 .as_str(),
@@ -58,6 +57,18 @@ fn main() -> Result<(), String> {
         g.canvas
             .copy(&texture, None, Rect::new(0, 0, width, height))?;
         g.canvas.present();
+
+        if g.rendering_options.limit_fps {
+            let durnano = (Instant::now() - strt_loop_time).as_nanos();
+
+            let target_dur_nano = (1_000_000_000u128 / 30);
+            if durnano < target_dur_nano {
+                ::std::thread::sleep(Duration::new(0, (target_dur_nano - durnano) as u32));
+            }
+            loop_dur = (Instant::now() - strt_loop_time).as_secs_f64();
+        } else {
+            loop_dur = (Instant::now() - strt_loop_time).as_secs_f64();
+        }
 
         //let t = format!("{:?}", 1.0 / loop_dur).as_str();
     }
