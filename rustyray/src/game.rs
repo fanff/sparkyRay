@@ -1,7 +1,7 @@
 //const BLACK: Color = Color::RGB(0, 0, 0);
 //const BLUE: Color = Color::RGB(1, 2, 233);
-pub const TEXTURE_W: u32 = 32;
-pub const TEXTURE_H: u32 = 24;
+pub const TEXTURE_W: u32 = 16;
+pub const TEXTURE_H: u32 = 16;
 
 pub const TEXTURE_BYTE_SIZE: usize = (TEXTURE_H * TEXTURE_W * 3) as usize;
 
@@ -15,6 +15,7 @@ use sdl2::rect::Rect;
 
 use sdl2::render::{Canvas, Texture, TextureCreator, WindowCanvas};
 
+use sdl2::video::FullscreenType;
 use sdl2::Sdl;
 
 pub const PARALLEL_OFF: bool = false;
@@ -36,14 +37,16 @@ impl SdlGame {
         let pool = rayon::ThreadPoolBuilder::new().build().unwrap();
 
         let sdl_context = sdl2::init().unwrap();
-        let window = sdl_context
+        let mut window = sdl_context
             .video()
             .unwrap()
             .window("f", screen_w, screen_h)
+            .resizable()
+            //.input_grabbed()
             .opengl()
             .build()
             .unwrap();
-
+        //window.set_fullscreen(FullscreenType::True).unwrap();
         let canvas = window
             .into_canvas()
             .build()
@@ -77,13 +80,16 @@ impl SdlGame {
         s
     }
     pub fn rebuild_views(&mut self) {
-        self.views = ViewZone::fullratio().split_border_n_ratio(
-            self.rendering_options.split,
-            TEXTURE_W,
-            TEXTURE_H,
-        )
-        // self.views = ViewZone::fullratio()
-        //     .split_n_ratio(self.rendering_options.split, self.rendering_options.split);
+        if self.rendering_options.bordering_split {
+            self.views = ViewZone::fullratio().split_border_n_ratio(
+                self.rendering_options.split,
+                TEXTURE_W,
+                TEXTURE_H,
+            )
+        } else {
+            self.views = ViewZone::fullratio()
+                .split_n_ratio(self.rendering_options.split, self.rendering_options.split);
+        }
     }
     pub fn events(&mut self) -> Result<(), String> {
         let mut event_pump = self.sdl_context.event_pump()?;
@@ -121,6 +127,16 @@ impl SdlGame {
                         self.rebuild_views();
                     }
                 }
+                Event::KeyDown {
+                    repeat: false,
+                    keycode: Some(Keycode::B),
+                    ..
+                } => {
+                    self.rendering_options.bordering_split =
+                        !self.rendering_options.bordering_split;
+                    self.rebuild_views();
+                }
+
                 Event::KeyDown {
                     keymod,
                     repeat: false,
@@ -274,7 +290,7 @@ impl SdlGame {
         //let tex = t_creator
         //    .create_texture_streaming(PixelFormatEnum::RGB24, TEXTURE_W, TEXTURE_H)
         //    .unwrap();
-
+        let (window_size_w, window_size_h) = self.canvas.window().size();
         if self.rendering_options.parallel_mode == PARALLEL_OFF {
             self.views
                 .iter()
@@ -289,7 +305,7 @@ impl SdlGame {
                         &mut buff,
                     );
 
-                    let r = vp.to_sceen_rect(800, 600);
+                    let r = vp.to_sceen_rect(window_size_w, window_size_h);
 
                     texture
                         .with_lock(None, |buffer: &mut [u8], pitch: usize| {
@@ -337,7 +353,7 @@ impl SdlGame {
                             &mut buff,
                         );
 
-                        let r = vp_copy.to_sceen_rect(800, 600);
+                        let r = vp_copy.to_sceen_rect(window_size_w, window_size_h);
                         tx.send((buff, r, vpidx)).unwrap();
                     });
                 })
@@ -407,6 +423,7 @@ pub struct RenderingOpts {
     pub enable_bp: bool,
     pub parallel_mode: bool,
     pub limit_fps: bool,
+    pub bordering_split: bool,
 }
 impl RenderingOpts {
     pub fn default() -> RenderingOpts {
@@ -414,8 +431,13 @@ impl RenderingOpts {
             split: 1,
             depth: 2,
             enable_bp: true,
-            parallel_mode: false,
+            parallel_mode: true,
             limit_fps: false,
+            bordering_split: false,
         }
+    }
+    pub fn to_str(&self) -> String {
+        let lol = format!("{:?}", self);
+        lol
     }
 }
