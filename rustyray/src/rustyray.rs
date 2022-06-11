@@ -15,7 +15,7 @@ use sdl2::render::Texture;
 
 pub type Vec3f = Array1<f64>;
 
-use crate::sdl_loader::load_stl;
+use crate::sdl_loader::{load_stl, load_stl_debug};
 use nalgebra::Vector3;
 
 //pub type Vec3f = Vector3<f64>;
@@ -26,6 +26,9 @@ pub fn vec3f_zero() -> Vec3f {
 }
 pub fn vec3f_x() -> Vec3f {
     arr1(&[1., 0., 0.])
+}
+pub fn vec3f_y() -> Vec3f {
+    arr1(&[0., 1.0, 0.])
 }
 pub fn vec3f_z() -> Vec3f {
     arr1(&[0., 0., 1.])
@@ -548,6 +551,7 @@ impl Scene {
 
 pub const BLACK: Color = Color([0.0, 0.0, 0.0]);
 pub const RED: Color = Color([1.0, 0.0, 0.0]);
+pub const GREEN: Color = Color([0.0, 1.0, 0.0]);
 pub const BLUE: Color = Color([0.0, 0.0, 1.0]);
 pub const WHITE: Color = Color([1.0, 1.0, 1.0]);
 
@@ -632,7 +636,7 @@ impl Material {
         Material {
             color: c,
             reflection: 0.0,
-            diffuse_c: 0.5,
+            diffuse_c: 0.0,
             specular_c: 0.0,
             specular_k: 0.0,
         }
@@ -650,21 +654,21 @@ pub struct Triangle {
 impl Triangle {
     pub fn new(v0: Vec3f, v1: Vec3f, v2: Vec3f, material: Material) -> Triangle {
         let mut t = Triangle {
-            v0: v0,
-            v1: v1,
-            v2: v2,
+            v0,
+            v1,
+            v2,
             normal: vec3f_zero(),
-            material: material,
+            material,
         };
         t.normal = t.get_normal();
-        return t;
+        t
     }
 
     pub fn default() -> Triangle {
         let mut t = Triangle {
             v0: vec3f_zero(),
             v1: vec3f_x(),
-            v2: vec3f_z(),
+            v2: vec3f_z() * 2.0,
             normal: vec3f_zero(),
             material: Material::default(),
         };
@@ -672,63 +676,44 @@ impl Triangle {
         return t;
     }
     pub fn intersect(&self, ray: &Ray) -> f64 {
-        use nalgebra::vector;
+        let v0v1: Vec3f = &self.v1 - &self.v0;
+        let v0v2: Vec3f = &self.v2 - &self.v0;
 
-        // Produces a Vector3<_> == SVector<_, 3>
-        let ray_dir: Vector3<f64> = vector![ray.dir[0], ray.dir[1], ray.dir[2]];
-
-        let v1 = &self.v1 - &self.v0;
-        let v2: Vec3f = &self.v2 - &self.v0;
-
-        let v0v1 = vector![v1[0], v1[1], v1[2]];
-        let v0v2 = vector![v2[0], v2[1], v2[2]];
-
-        let pvec = ray_dir.cross(&v0v2);
+        let pvec = cross_product(&ray.dir, &v0v2);
         let det = v0v1.dot(&pvec);
-
-        //let pvec = ray.dir.cross(v0v2);
-        //let det = v0v1.dot(pvec);
 
         if ((det).abs() < 0.001) {
             return f64::INFINITY;
         }
-        //if ((det).abs() < kEpsilon) return false;
         let invDet = 1.0 / det;
 
-        let ov0 = &ray.origin - &self.v0;
-        let tvec = vector![ov0[0], ov0[1], ov0[2]];
+        let tvec: Vec3f = &ray.origin - &self.v0;
         let u = tvec.dot(&pvec) * invDet;
 
         if (u < 0.0 || u > 1.0) {
             return f64::INFINITY;
         }
 
-        let ov1 = &ray.origin - &self.v1;
-        let vov1 = vector![ov1[0], ov1[1], ov1[2]];
-        let qvec = tvec.cross(&vov1);
-        let v = ray_dir.dot(&qvec) * invDet;
+        let qvec = cross_product(&tvec, &v0v1);
+        let v = &ray.dir.dot(&qvec) * invDet;
 
         if (v < 0.0 || u + v > 1.0) {
             return f64::INFINITY;
         };
 
         let t = v0v2.dot(&qvec) * invDet;
-
-        return t;
+        if t > 0.0 {
+            t
+        } else {
+            return f64::INFINITY;
+        }
     }
 
     pub fn get_normal(&self) -> Vec3f {
-        use nalgebra::vector;
-
         let v1 = &self.v1 - &self.v0;
         let v2: Vec3f = &self.v2 - &self.v0;
 
-        let v0v1 = vector![v1[0], v1[1], v1[2]];
-        let v0v2 = vector![v2[0], v2[1], v2[2]];
-
-        let pvec = v0v1.cross(&v0v2).normalize();
-
-        return arr1(&[pvec[0], pvec[1], pvec[2]]);
+        return normalize(&cross_product(&v1, &v2));
     }
 }
 
@@ -801,6 +786,15 @@ pub struct Sphere {
     pub radius: f64,
     pub material: Material,
 }
+impl Sphere {
+    pub fn new(v: Vec3f, radius: f64, material: Material) -> Sphere {
+        Sphere {
+            origin: v,
+            radius,
+            material,
+        }
+    }
+}
 
 impl Sphere {
     pub fn intersect(&self, ray: &Ray) -> f64 {
@@ -861,6 +855,13 @@ pub fn normalize(v: &Vec3f) -> Vec3f {
 //    *v = *v/n;
 //    return v
 //}
+pub fn cross_product(a: &Vec3f, b: &Vec3f) -> Vec3f {
+    let x = (a[1] * b[2]) - (a[2] * b[1]);
+    let y = a[2] * b[0] - a[0] * b[2];
+    let z = a[0] * b[1] - a[1] * b[0];
+
+    arr1(&[x, y, z])
+}
 
 pub fn norm_vec_2(v: &Vec3f) -> f64 {
     return v.dot(v);
@@ -916,12 +917,48 @@ pub fn load_scene_name(filename: String) -> Scene {
     let reader = BufReader::new(f);
     let mut scene: Scene = serde_json::from_reader(reader).unwrap();
 
-    let ob = Object::Triangle(Triangle::default());
+    let ob = Object::Triangle(Triangle::new(
+        vec3f_zero(),
+        vec3f_x(),
+        vec3f_z(),
+        Material::mat_color(RED),
+    ));
     let so = &mut scene.objects;
     so.push(ob);
 
-    //.a(ob);
-    let mut tris = load_stl("./Bunny-LowPoly.stl".to_string());
+    let t2 = Triangle::new(
+        vec3f_zero(),
+        -vec3f_x(),
+        -vec3f_z(),
+        Material::mat_color(WHITE),
+    );
+
+    println!("t2 : {:?}", t2);
+    so.push(Object::Triangle(t2));
+
+    let t3 = Triangle::new(
+        vec3f_zero(),
+        vec3f_z(),
+        -vec3f_x(),
+        Material::mat_color(GREEN),
+    );
+
+    println!("t3 : {:?}", t3.normal);
+    so.push(Object::Triangle(t3));
+
+    let t4 = Triangle::new(
+        vec3f_zero(),
+        vec3f_z(),
+        -vec3f_y(),
+        Material::mat_color(GREEN),
+    );
+
+    println!("t3 : {:?}", t4.normal);
+    so.push(Object::Triangle(t4));
+
+    let mut tris = load_stl_debug("./Lowpolyring.stl".to_string());
     so.append(&mut tris);
+
+    so.append(&mut load_stl("./Lowpolyring.stl".to_string()));
     scene
 }

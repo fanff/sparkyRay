@@ -9,7 +9,6 @@ pub type TextureType = [u8; 3 * TEXTURE_H as usize * TEXTURE_W as usize];
 
 use crate::{load_scene_name, Scene, ViewZone};
 
-
 use rayon::ThreadPool;
 use sdl2::event::Event;
 use sdl2::keyboard::{Keycode, Mod};
@@ -328,8 +327,6 @@ impl SdlGame {
         }
         if self.rendering_options.parallel_mode == PARALLEL_ON {
             let (tx, rx) = std::sync::mpsc::channel();
-            //println!("render! ");
-
             self.views
                 .iter()
                 .enumerate()
@@ -342,11 +339,9 @@ impl SdlGame {
                     let sc_copy = self.scene.clone();
                     let vp_copy = vp.clone();
                     let depth = self.rendering_options.depth;
+                    let mut buff: TextureType = [0u8; TEXTURE_BYTE_SIZE];
+
                     self.pool.spawn(move || {
-                        //let mut buff2: TextureType;
-                        let mut buff: TextureType = [0u8; TEXTURE_BYTE_SIZE];
-                        //let mut buff = [0u8; 3 * TEXTURE_W as usize * TEXTURE_H as usize];
-                        //&sc_copy;
                         sc_copy.render_zone_to_buff(
                             TEXTURE_W as usize,
                             TEXTURE_H as usize,

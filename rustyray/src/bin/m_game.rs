@@ -37,10 +37,10 @@ fn main() -> Result<(), String> {
         let surface = font
             .render(
                 format!(
-                    "{:.1} fps \nthreading: {:}\ndepth:{:}\nsplit:{:}\n{:?}",
+                    "{:.1} fps \norigin: {:}\ndir:{:}\nsplit:{:}\n{:?}",
                     1.0 / loop_dur,
-                    g.rendering_options.parallel_mode,
-                    g.rendering_options.depth,
+                    g.scene.camera.origin,
+                    g.scene.camera.dir,
                     (g.rendering_options.split as u32),
                     g.rendering_options,
                 )

@@ -16,6 +16,7 @@ nalgebra = "0.31.0"
 winit = "0.26.1"
 
 stl_io = "0.6.0"
+gl = "0.14.0"
 
 rayon = "1.5.3"
 blas-src = { version = "0.8", features = ["openblas"] }

@@ -9,7 +9,6 @@ bool rayTriangleIntersect(
     const Vec3f &v0, const Vec3f &v1, const Vec3f &v2, 
     float &t, float &u, float &v) 
 { 
-#ifdef MOLLER_TRUMBORE 
     Vec3f v0v1 = v1 - v0; 
     Vec3f v0v2 = v2 - v0; 
     Vec3f pvec = dir.crossProduct(v0v2); 

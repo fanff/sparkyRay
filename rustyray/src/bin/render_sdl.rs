@@ -38,8 +38,6 @@ pub fn make_textures<'r>(
 }
 
 fn main() -> Result<(), String> {
-    let game: SdlGame;
-
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(8)
         .build()
